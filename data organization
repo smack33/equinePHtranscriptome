@@ -10,3 +10,15 @@ Each time period has diseased and healthy horses (with Equine Pasture Heaves)
     Healthy: Butterfinger, Kadence, Buddy, Choice, Babs & Toots
 Within each horse biopsies were taken during disease remission and disease exacerbation time points. 
 After concatenation each horse ends up with 8 paired-end files.
+  Two lanes, forward and reverse for both disease(DZ) and remission(RM). 
+Ex: 
+1641-Chico-020216-RM_S2_L003_R1_001.fastq.gz  
+1641-Chico-020216-RM_S2_L003_R2_001.fastq.gz  
+1641-Chico-020216-RM_S2_L004_R1_001.fastq.gz 
+1641-Chico-020216-RM_S2_L004_R2_001.fastq.gz   
+1641-Chico-041515-DZ_S1_L003_R1_001.fastq.gz       
+1641-Chico-041515-DZ_S1_L003_R2_001.fastq.gz      
+1641-Chico-041515-DZ_S1_L004_R1_001.fastq.gz     
+1641-Chico-041515-DZ_S1_L004_R2_001.fastq.gz 
+
+
