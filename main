@@ -1,0 +1,123 @@
+#Update the base software
+sudo apt-get update && \
+sudo apt-get -y install screen git curl gcc make g++ python-dev unzip \
+        default-jre pkg-config libncurses5-dev r-base-core r-cran-gplots \
+        python-matplotlib python-pip python-virtualenv sysstat fastqc \
+        trimmomatic bowtie samtools blast2 wget bowtie2 openjdk-8-jre
+ 
+#install khmer from its source code
+	cd ~/
+	python2.7 -m virtualenv pondenv
+	source pondenv/bin/activate
+	cd pondenv
+	pip install -U setuptools
+	git clone --branch v2.0 https://github.com/dib-lab/khmer.git
+	cd khmer
+	make install
+
+#install Salmon
+	cd 
+	curl -LO https://github.com/COMBINE-lab/salmon/releases/download/v0.7.2/Salmon-0.7.2_linux_x86_64.tar.gz
+	tar -xvzf Salmon-0.7.2_linux_x86_64.tar.gz
+	cd Salmon*/bin
+	echo export PATH=$PATH:$(pwd) >> ~/pondenv/bin/activate
+	source ~/pondenv/bin/activate
+  
+ #folderstructure
+ #/mnt/Chipperbucket
+ #/mnt/work
+ #/mnt/work/2010
+ #/mnt/work/2015
+  
+#becasue we are using the Google bucket -- must mount EVERYTIME you restart the insance!!
+	gcsfuse --implicit-dirs 2017_swidstorbucket /mnt/chipperbucket
+ 
+#files within the bucket must be "simlinked" to your working directory
+#2015/16 files copy all at once -- 2010/11 must be moved by directory
+#2010/11: there are many levels of directories within the bucket, so we had to make sure to simlink JUST the files (problem with links when it is the directories that are linked)
+  ln -s /mnt/chipperbucket/Lung\ Transcriptome\ 2010/Cheers\ 8-30-10/Cheers*.fastq.gz /mnt/work/2010
+
+#2015/16
+ ln -s /mnt/chipperbucket/USDA2015\ RNA\ sequencing/*.fastq.gz /mnt/work/2015
+ 
+ #files need to be concatenated so that each horse will have a total of 8 files. 
+cat Merry_2-9-11_CAGATC_L004_R2_001.fastq.gz Merry_2-9-11_CAGATC_L004_R2_002.fastq.gz Merry_2-9-11_CAGATC_L004_R2
+_003.fastq.gz Merry_2-9-11_CAGATC_L004_R2_004.fastq.gz Merry_2-9-11_CAGATC_L004_R2_005.fastq.gz Merry_2-9-11_CAGATC_L004_R2_006.fastq.gz Merry_2
+-9-11_CAGATC_L004_R2_007.fastq.gz Merry_2-9-11_CAGATC_L004_R2_008.fastq.gz Merry_2-9-11_CAGATC_L004_R2_009.fastq.gz Merry_2-9-11_CAGATC_L004_R2_
+010.fastq.gz Merry_2-9-11_CAGATC_L004_R2_011.fastq.gz Merry_2-9-11_CAGATC_L004_R2_012.fastq.gz Merry_2-9-11_CAGATC_L004_R2_013.fastq.gz Merry_2-
+9-11_CAGATC_L004_R2_014.fastq.gz Merry_2-9-11_CAGATC_L004_R2_015.fastq.gz > Merry_RM_L004_R2.fastq.gz
+
+##run fastqc
+fastqc *.fastq.gz
+
+##view files with multiqc
+multiqc .
+
+#grab the correct Illumina Adapters
+wget https://anonscm.debian.org/cgit/debian-med/trimmomatic.git/plain/adapters/TruSeq3-PE.fa
+wget https://anonscm.debian.org/cgit/debian-med/trimmomatic.git/plain/adapters/TruSeq2-PE.fa
+wget https://anonscm.debian.org/cgit/debian-med/trimmomatic.git/plain/adapters/TruSeq3-PE-2.fa
+
+#concatenate into a single adapter file
+  cat TruSeq2-PE.fa TruSeq3-PE.fa TruSeq3-PE-2.fa > all-adapters.fa
+
+#trimmomatic using the concatenated adapters 
+#tried first on one pair of reads
+  TrimmomaticPE 1641-Chico-020216-RM_S2_L003_R1_001.fastq.gz 1641-Chico-020216-RM_S2_L003_R2_001.fastq.gz 1641-Chico-020216-RM_S2_L003_R 1_001.qc.fq.gz Chico_L003_R1_se 1641-Chico-020216-RM_S2_L003_R2_001.qc.fq.gz Chico_L003_R2_se ILLUMINACLIP:all-adapters:2:40:15
+
+#trimmomatic for the whole set separated into 2010 and 2015
+
+#2010
+
+for filename in Cheers_R1*.fastq.gz
+do
+     # first, make the base by removing fastq.gz
+     base=$(basename $filename .fastq.gz)
+     echo $base
+
+     # now, construct the R2 filename by replacing R1 with R2
+     baseR2=${base/_R1_/_R2_}
+     echo $baseR2
+
+     # finally, run Trimmomatic
+	 TrimmomaticPE ${base}.fastq.gz ${baseR2}.fastq.gz trimmed/2010/${base}.qc.fq.gz trimmed/2010/s1_se trimmed/2010/${baseR2}.qc.fq.gz trimmed/2010/s2_se ILLUMINACLIP:all-adapters.fa:2:40:15
+     
+     # save the orphans
+     gzip -9c s1_se s2_se >> orphans.qc.fq.gz
+     rm -f s1_se s2_se
+done
+
+#2015
+rm -f orphans.qc.fq.gz
+	
+for filename in *_S*_R1_*.fastq.gz
+do
+     # first, make the base by removing fastq.gz
+     base=$(basename $filename .fastq.gz)
+     echo $base
+
+     # now, construct the R2 filename by replacing R1 with R2
+     baseR2=${base/_R1_/_R2_}
+     echo $baseR2
+
+     # finally, run Trimmomatic
+	 TrimmomaticPE ${base}.fastq.gz ${baseR2}.fastq.gz trimmed/2015/${base}.qc.fq.gz trimmed/2015/s1_se trimmed/2015/${baseR2}.qc.fq.gz trimmed/2015/s2_se ILLUMINACLIP:all-adapters.fa:2:40:15
+     
+     # save the orphans
+     gzip -9c s1_se s2_se >> orphans.qc.fq.gz
+     rm -f s1_se s2_se
+done
+
+#orphans will be in the quality folder
+
+#to look at sequence length
+  grep -c '>' in.fasta
+
+#to look at sequence length divided by 4 (won't be divisible by 4 if it is truncated)
+	expr $(cat in.fasta | wc -l) / 4
+  
+#reevaluate with fastqc & multiqc
+  fastqc *.pe.qc.fq.gz
+  multiqc . 
+
+#Run Salmon
