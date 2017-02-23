@@ -120,4 +120,29 @@ done
   fastqc *.pe.qc.fq.gz
   multiqc . 
 
+#within /work
+  mkdir -p quant
+  cd quant
+#soft link the quality trimmed files to the quant directory
+  ln -s ../quality/trimmed/*R1*.qc.fq.gz .
+  ln -s ../quality/trimmed/*R2*.qc.fq.gz .
+
+#get reference transcriptome
+  wget http://de.cyverse.org/dl/d/8D105FFF-C9E7-437F-8710-45FF0C98377D/refined.fasta
+
+#build an index
+  salmon index --index equine --transcripts refined.fasta --type quasi
+
 #Run Salmon
+	for R1 in *R1*.qc.fq.gz
+	do
+	  sample=$(basename $R1 extract.qc.fq.gz)
+	  echo sample is $sample, R1 is $R1
+	  R2=${R1/R1/R2}
+	  echo R2 is $R2
+	  salmon quant -i equine -p 2 -l IU -1 <(gunzip -c $R1) -2 <(gunzip -c $R2) -o ${sample}quant
+	done
+
+#look for our files
+find 1641-Chico-020216-RM_S2_L003_R2_001* -type f
+
