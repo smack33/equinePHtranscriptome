@@ -1,0 +1,12 @@
+Data is split into two time periods. 
+  1) Tissue collected in 2010/2011
+  2) Tissue collected in 2015/2016
+Each time period has diseased and healthy horses (with Equine Pasture Heaves)
+  2010/2011
+    Diseased: Thunder, Merry & Chico
+    Healthy: Goldbar & Cheers
+  2015/2016
+    Diseased: Chico, Blue, Cassie, Glitter, Commanche & Smokey
+    Healthy: Butterfinger, Kadence, Buddy, Choice, Babs & Toots
+Within each horse biopsies were taken during disease remission and disease exacerbation time points. 
+After concatenation each horse ends up with 8 paired-end files.
