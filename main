@@ -123,6 +123,8 @@ done
 #within /work
   mkdir -p quant
   cd quant
+  source ~/pondenv/bin/activate
+  
 #soft link the quality trimmed files to the quant directory
   ln -s ../quality/trimmed/*R1*.qc.fq.gz .
   ln -s ../quality/trimmed/*R2*.qc.fq.gz .
@@ -134,6 +136,7 @@ done
   salmon index --index equine --transcripts refined.fasta --type quasi
 
 #Run Salmon
+source ~/pondenv/bin/activate
 	for R1 in *R1*.qc.fq.gz
 	do
 	  sample=$(basename $R1 extract.qc.fq.gz)
