@@ -1,0 +1,251 @@
+
+#run edgeR
+install.packages.auto <- function(x) {
+  x <- as.character(substitute(x))
+  if(isTRUE(x %in% .packages(all.available=TRUE))) {
+    eval(parse(text = sprintf("require(\"%s\")", x)))
+  } else {
+    #update.packages(ask= FALSE) #update installed packages.
+    eval(parse(text = sprintf("install.packages(\"%s\", dependencies = TRUE,repos=structure(c(CRAN='https://cran.cnr.berkeley.edu/')))", x)))
+  }
+  if(isTRUE(x %in% .packages(all.available=TRUE))) {
+    eval(parse(text = sprintf("require(\"%s\")", x)))
+  } else {
+    source("http://bioconductor.org/biocLite.R")
+    #biocLite(character(), ask=FALSE) #update installed packages.
+    eval(parse(text = sprintf("biocLite(\"%s\")", x)))
+    eval(parse(text = sprintf("require(\"%s\")", x)))
+  }
+}
+install.packages.auto("edgeR")
+
+install.packages("locfit")
+
+setwd("/mnt/work/quant")
+files<-list.files(".","counts$")
+counts<-readDGE(files)
+
+
+ChicoRML003.lib<-1183298
+ChicoRML004.lib<-1177476
+ChicoDZL003.lib<-1269682
+ChicoDZL004.lib<-1265697
+BlueRML003.lib<-1306738
+BlueRML004.lib<-1301592
+BlueDZL003.lib<-1174157
+BlueDZL004.lib<-1167877
+CassieRML003.lib<-1309924
+CassieRML004.lib<-1300490
+CassieDZL003.lib<-1168711
+CassieDZL004.lib<-1161671
+GlitterRML003.lib<-1215854
+GlitterRML004.lib<-1205711
+GlitterDZL003.lib<-1141082
+GlitterDZL004.lib<-1128104
+CommancheRML003.lib<-1145861
+CommancheRML004.lib<-1140020
+CommancheDZL003.lib<-1253048
+CommancheDZL004.lib<-1248591
+SmokeyRML003.lib<-1291339
+SmokeyRML004.lib<-1286626
+SmokeyDZL005.lib<-1511929
+SmokeyDZL003.lib<-604208
+SmokeyDZL004.lib<-599096
+ButrfngrRML003.lib<-1076226
+ButrfngrRML004.lib<-1069355
+ButrfngrDZL003.lib<-1180720
+ButrfngrDZL004.lib<-1174764
+KadenceRML003.lib<-1331540
+KadenceRML004.lib<-1326400
+KadenceDZL003.lib<-1459101
+KadenceDZL 004.lib<-1454040
+BuddyRML003.lib<-1631323
+BuddyRML004.lib<-1623909
+BuddyDZL003.lib<-1814335
+BuddyDZL004.lib<-1802514
+ChoiceDZL003.lib<-1138407
+ChoiceDZL004.lib<-1132051
+ChoiceRML003.lib<-1321582
+ChoiceRML004.lib<-1314574
+BabsDZL003.lib<-1323761
+BabsDZL004.lib<-1313390
+BabsRML003.lib<-1320966
+BabsRML004.lib<-1311730
+TootsDZL003.lib<-2494815
+TootsDZL004.lib<-2482744
+TootsRML003.lib<-1041658
+TootsRML004.lib<-1032855
+
+#print(data)
+#head(data$counts)
+#definegroup
+
+group <- c("RM", "RM", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "RM", "RM", "DZ", "DZ", "RM", "RM") 
+
+dge = DGEList(counts=counts, group=group)
+
+# Filter out lowly expressed genes
+# Criterion: normalized to counts per million, 6 or 7 reads per sample in 2 or more libraries per group
+
+keep<-rowSums(cpm(dge)>1) >=2
+dge <- dge[keep, , keep.lib.sizes=FALSE]
+dge <- calcNormFactors(dge)
+
+design<-model.matrix(~group)
+
+# Estimate dispersion
+library(locfit) # dependency not installed when edgeR was installed
+dge <- estimateCommonDisp(dge,design)
+dge <- estimateTagwiseDisp(dge)
+
+## make an MA-plot of DZ vs RM 
+
+et <- exactTest(dge, pair=c("DZ", "RM"))
+etp <- topTags(et, sort.by="PValue", n=100000)
+
+# output CSV for DZ/RM
+write.csv(etp$table, "equinePH-edgeR-DZvRM.csv")
+
+
+etp$table$logFC = -etp$table$logFC
+pdf("equinePH-edgeR-MA-plot.pdf")
+plot(
+  etp$table$logCPM,
+  etp$table$logFC,
+  xlim=c(-3, 20), ylim=c(-12, 12), pch=20, cex=.3,
+  col = ifelse( etp$table$FDR < .2, "red", "black" ) )
+dev.off()
+
+# plot MDS
+labels=c("Chico_RM1", "Chico_RM2", "Chico_DZ1", "Chico_DZ2", "Blue_RM1", "Blue_RM2", "Blue_DZ1", "Blue_DZ2", 
+"Cassie_RM1", "Cassie_RM2", "Cassie_DZ1", "Cassie_DZ2", "Glitter_RM1", "Glitter_RM2", "Glitter_DZ1", "Glitter_DZ2", "Commanche_RM1", 
+"Commanche_RM2", "Commanche_DZ1", "Commanche_DZ2", "Smokey_RM1", "Smokey_RM2", "Smokey_DZ1", "Smokey_DZ2", "Smokey_DZ3", "Butrfngr_RM1", 
+"Butrfngr_RM2", "Butrfngr_DZ1", "Butrfngr_DZ2", "Kadence_RM1", "Kadence_RM2", "Kadence_DZ1", "Kadence_DZ2", "Buddy_RM1", "Buddy_RM2", 
+"Buddy_DZ1", "Choice_DZ1", "Choice_DZ2", "Choice_RM1", "Choice_RM2", "Babs_DZ1", "Babs_DZ2", "Babs_RM1", "Babs_RM2", "Toots_DZ1", "Toots_DZ2", "Toots_RM1", 
+"Toots_RM2")
+
+
+pdf("equinePH-edgeR-MDS.pdf")
+plotMDS(dge, labels=labels)
+dev.off()
+
+
+#####edgeR additive model
+
+library(edgeR)
+library(limma)
+library(locfit)
+
+setwd("/Users/savannahmack/Documents/chipper")
+
+#read counts
+files <- list.files(".","counts$")
+counts <- readDGE(files)
+counts$samples
+head(counts$sample)
+
+#design matrix Diseased State (D=diseased, H=healthy) Season (W=winter, S=summer)
+Season<- c("W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","W","S","S","W","W","S","S","W","W","S","S","S","W","W","S","S","W","W","S","S","W","W")
+Subject<- c("D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H")
+Targets<-cbind(Season, Subject)
+head(Targets)
+
+samples<- counts$samples
+Names<-samples$files 
+head(Names)
+targets<-cbind(Names, Targets)
+targets<-as.data.frame(targets)
+class(targets)
+head(targets)
+
+Subject <- factor(targets$Subject, levels=c("D","H"))
+Season <- factor(targets$Season, levels=c("W","S"))
+design <- model.matrix(~Subject+Season,targets)
+
+head(design)
+
+length(Subject)
+dim(Subject)
+length(Season)
+
+y <- estimateGLMCommonDisp(counts,design)
+y <- estimateGLMTrendedDisp(y,design)
+y <- estimateGLMTagwiseDisp(y,design)
+
+fit <- glmFit(y, design)
+lrt <- glmLRT(fit)
+GLMresults<-topTags(lrt, n=20000, p.value=1)
+rel_tags<-GLMresults$table
+head(GLMresults$table)
+
+#combine annotation files
+annot<-read.delim("RNAseqSupTrans.merge (1).reduced")
+head(annot)
+GLMresults_names<-rownames(GLMresults$table)
+rel_tags<-cbind(GLMresults_names, rel_tags)
+anot_rel_all<-merge(rel_tags, annot, by.x = "GLMresults_names", by.y="transcript.ID")
+head(anot_rel_all)
+write.csv(anot_rel_all, "p1_equinephGLM_DE_anot.csv")
+
+
+
+
+
+#####edgeR comparisons between and within groups
+
+
+
+library(edgeR)
+library(limma)
+library(locfit)
+
+setwd("/Users/savannahmack/Documents/chipper")
+
+#read counts
+files <- list.files(".","counts$")
+counts <- readDGE(files)
+counts$samples
+head(counts$sample)
+
+#design matrix Diseased State (D=diseased, H=healthy) Season (W=winter, S=summer)
+Subject<- c("1","1","1","1","2","2","2","2","3","3","3","3","4","4","4","4","5","5","5","5","6","6","6","6","6","1","1","1","1","2","2","2","2","3","3","3","4","4","4","4","5","5","5","5","6","6","6","6")
+Season<- c("W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","W","S","S","W","W","S","S","W","W","S","S","S","W","W","S","S","W","W","S","S","W","W")
+Condition<- c("D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H")
+Targets<-cbind(Subject, Condition, Season)
+head(Targets)
+Targets<-as.data.frame(Targets)
+
+
+#define factors
+Condition <- factor(Targets$Conditon, levels=c("D","H"))
+Season <- factor(Targets$Season, levels=c("W","S"))
+Subject <- factor(Targets$Subject, levels=c("1","2","3","4","5","6"))
+data.frame(Subject,Condition,Season)
+
+#construct matrix
+design<- model.matrix(~Condition+Condition:Subject+Condition:Season)
+colnames(design)
+
+#estimate dispersions
+y <- estimateGLMCommonDisp(counts,design)
+y <- estimateGLMTrendedDisp(y,design)
+y <- estimateGLMTagwiseDisp(y,design)
+
+#fit to a linear model
+fit <- glmFit(y, design)
+#genes that respond differently to summer fro healthy v disease
+lrt <- glmLRT(fit, contrast=c(0,0,0,0,0,0,0,0,0,0,0,-1,0,1))
+
+GLMwibtwnresults<-topTags(lrt, n=20000, p.value=1)
+rel_tags<-GLMwibtwnresults$table
+head(GLMwibtwnresults$table)
+
+#combine annotation files
+annot<-read.delim("RNAseqSupTrans.merge (1).reduced")
+head(annot)
+GLMwibtwnresults_names<-rownames(GLMwibtwnresults$table)
+rel_tags<-cbind(GLMwibtwnresults_names, rel_tags)
+anot_rel_all<-merge(rel_tags, annot, by.x = "GLMwibtwnresults_names", by.y="transcript.ID")
+head(anot_rel_all)
+write.csv(anot_rel_all, "p1_equinephGLMwibtwn_DE_anot.csv")
+
