@@ -282,5 +282,65 @@ plotMDS(dge, labels=labels)
 dev.off()
 
 
+#edgeR take 2!
+
+library(edgeR)
+library(limma)
+library(locfit)
+
+setwd("/Users/savannahmack/Documents/chipper")
+
+#read counts
+files <- list.files(".","counts$")
+counts <- readDGE(files)
+counts$samples
+head(counts$sample)
+
+#design matrix Diseased State (D=diseased, H=healthy) Season (W=winter, S=summer)
+Season<- c("W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","S","S","W","W","W","S","S","W","W","S","S","W","W","S","S","S","W","W","S","S","W","W","S","S","W","W")
+Subject<- c("D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","D","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H","H")
+Targets<-cbind(Season, Subject)
+head(Targets)
+
+samples<- counts$samples
+Names<-samples$files 
+head(Names)
+targets<-cbind(Names, Targets)
+targets<-as.data.frame(targets)
+class(targets)
+head(targets)
+
+
+Subject <- factor(targets$Subject, levels=c("D","H"))
+Season <- factor(targets$Season, levels=c("W","S"))
+design <- model.matrix(~Subject+Season,targets)
+
+head(design)
+
+length(Subject)
+dim(Subject)
+length(Season)
+
+
+y <- estimateGLMCommonDisp(counts,design)
+y <- estimateGLMTrendedDisp(y,design)
+y <- estimateGLMTagwiseDisp(y,design)
+
+fit <- glmFit(y, design)
+lrt <- glmLRT(fit)
+GLMresults<-topTags(lrt, n=20000, p.value=1)
+rel_tags<-GLMresults$table
+head(GLMresults$table)
+
+#combine annotation files
+annot<-read.delim("RNAseqSupTrans.merge (1).reduced")
+head(annot)
+GLMresults_names<-rownames(GLMresults$table)
+rel_tags<-cbind(GLMresults_names, rel_tags)
+anot_rel_all<-merge(rel_tags, annot, by.x = "GLMresults_names", by.y="transcript.ID")
+head(anot_rel_all)
+write.csv(anot_rel_all, "p1_equinephGLM_DE_anot.csv")
+
+
 
 
