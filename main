@@ -29,7 +29,7 @@ sudo apt-get -y install screen git curl gcc make g++ python-dev unzip \
  #/mnt/work/2010
  #/mnt/work/2015
   
-#becasue we are using the Google bucket -- must mount EVERYTIME you restart the insance!!
+#becasue we are using the Google bucket -- must mount EVERYTIME you restart the instance!!
 	gcsfuse --implicit-dirs 2017_swidstorbucket /mnt/chipperbucket
  
 #files within the bucket must be "simlinked" to your working directory
