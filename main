@@ -173,6 +173,8 @@ install.packages.auto("edgeR")
 
 install.packages("locfit")
 
+##### Script used for edgeR in NewGLMscript.R file
+
 setwd("/mnt/work/quant")
 files<-list.files(".","counts$")
 counts<-readDGE(files)
